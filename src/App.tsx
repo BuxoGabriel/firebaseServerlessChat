@@ -1,35 +1,60 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+import firebase from 'firebase/compat/app'
+import { Auth, GoogleAuthProvider, getAuth, signInWithPopup } from 'firebase/auth'
+import { getFirestore } from 'firebase/firestore'
 
+import { useAuthState } from "react-firebase-hooks/auth"
+
+import Loading from './components/Loading'
+import Chatroom from './containers/Chatroom'
+
+function App() {
+  const firebaseConfig = {
+    apiKey: "AIzaSyBbOlRqB0fUV1o0qetcD_R9rUYoQNT8O4w",
+    authDomain: "serverlesschat-c38ac.firebaseapp.com",
+    projectId: "serverlesschat-c38ac",
+    storageBucket: "serverlesschat-c38ac.appspot.com",
+    messagingSenderId: "554620784680",
+    appId: "1:554620784680:web:e2f99029f14dc595dfa51d",
+    measurementId: "G-W34YPLS2QG"
+  }
+  const app = firebase.initializeApp(firebaseConfig)
+  const auth = getAuth(app)
+  const firestore = getFirestore(app)
+
+  const [user, loading] = useAuthState(auth)
   return (
     <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <SignOut auth={auth}/>
+      {loading && <Loading/>}
+      {user? <Chatroom db={firestore}/>: <SignIn auth={auth}/>}
     </>
   )
+}
+
+function SignOut({auth}: {auth: Auth}) {
+  return auth.currentUser && <button onClick={() => auth.signOut()}>Sign Out</button>
+}
+
+function SignIn({auth}: {auth: Auth}) {
+  const useSignInWithGoogle = () => {
+    const provider = new GoogleAuthProvider()
+    signInWithPopup(auth, provider)
+      .then(result => {
+        const credential = GoogleAuthProvider.credentialFromResult(result)
+        const token = credential?.accessToken
+        const user = result.user
+      })
+      .catch(err => {
+        const errCode = err.code
+        const errMsg = err.message
+        const email = err.customData.email
+        const credential = GoogleAuthProvider.credentialFromError(err)
+        console.error(errCode, errMsg, email, credential)
+      })
+  }
+  return <button className='SignIn' onClick={useSignInWithGoogle}>Sign In</button>
 }
 
 export default App
